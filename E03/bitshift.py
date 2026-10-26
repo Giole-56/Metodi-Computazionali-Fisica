@@ -1,0 +1,16 @@
+nn1 = input( 'inserisci primo valore ', )
+bit1 = input( 'inserisci numero bit ', )
+
+n1 = int(nn1)
+b1 = int(bit1)
+
+print( bin(n1))
+
+print( hex(n1))
+
+n1_plusb1  = ( n1 << b1 )
+n1_minusb1 = ( n1 >> b1 )
+
+
+print('n1<<b1: {:>12} {:>6}'.format( bin(n1_plusb1),  hex(n1_plusb1)))
+print('n1>>b1: {:>12} {:>6}'.format( bin(n1_minusb1), hex(n1_minusb1)))
