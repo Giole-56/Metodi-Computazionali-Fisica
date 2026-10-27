@@ -1,3 +1,4 @@
+#ottobre#
 lgs = ['lun', 'mar', 'mer', 'gio', 'ven', 'sab', 'dom']
 
 lgo = ['gio', 'ven', 'sab', 'dom', 'lun', 'mar', 'mer']
@@ -12,3 +13,5 @@ oct_dict = {1 : 'gio', 2 : 'ver', 3 : 'sab', 4 : 'dom', 5 : 'lun', 6 : 'mar', 7 
 
 for k in oct_dict:
     print('{: <10} {:02d}'.format(oct_dict[k], k))
+
+
