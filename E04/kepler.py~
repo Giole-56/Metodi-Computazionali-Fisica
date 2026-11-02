@@ -1,0 +1,118 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# 1. Legge il file CSV e crea il DataFrame pandas corrispondente
+file_path = 'kplr010666592-2011240104155_slc.csv'
+df = pd.read_csv(file_path)
+
+df.columns = df.columns.str.strip()
+
+time_col = 'TIME'  
+flux_col = 'PDCSAP_FLUX'
+err_col = 'PDCSAP_FLUX_ERR'
+
+# 3. Produce il grafico del flusso in funzione del tempo
+plt.figure(figsize=(12, 5))
+plt.plot(df[time_col], df[flux_col], color='royalblue', linewidth=0.6, alpha=0.8)
+
+plt.title('Curva di luce (Flusso in funzione del tempo)', fontsize=14)
+plt.xlabel('Tempo(s)', fontsize=12)
+plt.ylabel('Flusso(e-/s)', fontsize=12)
+
+# Mostra il grafico
+plt.tight_layout()
+plt.show()
+
+plt.figure(figsize=(12, 5))
+plt.plot(df[time_col], df[flux_col],'o', color='royalblue',)
+
+plt.title('Curva di luce (Flusso in funzione del tempo)', fontsize=14)
+plt.xlabel('Tempo(s)', fontsize=12)
+plt.ylabel('Flusso(e-/s)', fontsize=12)
+
+# Mostra il grafico
+plt.tight_layout()
+plt.show()
+
+#Grafico errori# 
+
+# 2. Produce il grafico con barre di errore
+plt.figure(figsize=(12, 5))
+
+plt.errorbar(df[time_col],  df[flux_col],  yerr=df[err_col], fmt='o', color='purple', ecolor='gray', markersize=0.5,)
+
+plt.title('Curva di luce con barre di errore', fontsize=14)
+plt.xlabel('Tempo(s)', fontsize=12)
+plt.ylabel('Flusso(e-/s)', fontsize=12)
+
+# 3. Salva il risultato nei formati PNG e PDF
+plt.tight_layout()
+plt.savefig('curva_di_luce_errori.png', dpi=300)  
+plt.savefig('curva_di_luce_errori.pdf')           
+
+# Mostra il grafico a schermo
+plt.show()
+
+#Grafico localizzato#
+
+t_start = 954.5 
+t_end = 955.0
+
+df_zoom = df.loc[(df[time_col] >= t_start) & (df[time_col] <= t_end)]
+
+plt.figure(figsize=(10, 5))
+
+plt.errorbar( df_zoom[time_col], df_zoom[flux_col],fmt='o', yerr=df_zoom[err_col], color='teal', ecolor='gray', markersize=0.8,)
+
+plt.title(f'Zoom localizzato (Tempo: da {t_start} a {t_end})', fontsize=14)
+plt.xlabel('Tempo(s)', fontsize=12)
+plt.ylabel('Flusso(e-/s)', fontsize=12)
+
+# 4. Salva il risultato nei formati PNG e PDF
+plt.tight_layout()
+plt.savefig('minimo_zoom_errori.png', dpi=300)
+plt.savefig('minimo_zoom_errori.pdf')
+
+# Mostra il grafico a schermo
+plt.show()
+
+#Grafico con zoom#
+
+fig, ax = plt.subplots(figsize=(12, 5))
+axins = ax.inset_axes([0.55, 0.52, 0.38, 0.38])
+
+# Disegna il grafico ingrandito nel riquadro
+axins.errorbar( df_zoom[time_col], df_zoom[flux_col],  yerr=df_zoom[err_col], fmt='o', color='teal', ecolor='gray', markersize=3,)
+
+# Imposta i limiti dell'asse x del riquadro sull'intervallo scelto
+axins.set_xlim(t_start, t_end)
+axins.set_title('Zoom localizzato', fontsize=10)
+
+# Disegna il grafico ingrandito nel riquadro
+axins.errorbar( df_zoom[time_col], df_zoom[flux_col], yerr=df_zoom[err_col], fmt='o', color='teal',  ecolor='gray', elinewidth=0.8, markersize=1, alpha=0.8)
+
+# Imposta i limiti dell'asse x del riquadro sull'intervallo scelto
+axins.set_xlim(t_start, t_end)
+axins.set_title('Zoom localizzato', fontsize=10)
+
+# Disegna automaticamente i collegamenti visivi tra il riquadro e la curva principale
+ax.indicate_inset_zoom(axins, edgecolor="black", alpha=0.7)
+
+# 5. Salva il risultato nei formati PNG e PDF
+plt.tight_layout()
+plt.savefig('curva_di_luce_con_inset.png', dpi=300)
+plt.savefig('curva_di_luce_con_inset.pdf')
+
+# Mostra il grafico a schermo
+plt.show()
+
+# Disegna automaticamente i collegamenti visivi tra il riquadro e la curva principale
+ax.indicate_inset_zoom(axins, edgecolor="black", alpha=0.7)
+
+# 5. Salva il risultato nei formati PNG e PDF
+plt.tight_layout()
+plt.savefig('curva_di_luce_con_inset.png', dpi=300)
+plt.savefig('curva_di_luce_con_inset.pdf')
+
+# Mostra il grafico a schermo
+plt.show()
