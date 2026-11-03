@@ -89,12 +89,14 @@ plt.show()
 plt.figure(figsize=(10, 6))
 mass_transit = df_transit['pl_bmassj'].dropna()
 mass_rv = df_rv['pl_bmassj'].dropna()
+bins_mass = np.linspace(
+        min(mass_transit.min(), mass_rv.min()), 
+        max(mass_transit.max(), mass_rv.max()), 
+        50
+    )
 
-if not mass_transit.empty and not mass_rv.empty:
-    bins_mass = np.logspace(np.log10(max(mass_transit.min(), 1e-5)), np.log10(mass_transit.max()), 50)
-    plt.hist(mass_transit, bins=bins_mass, alpha=0.5, color='blue', label='Transit')
-    plt.hist(mass_rv, bins=bins_mass, alpha=0.5, color='orange', label='Radial Velocity')
-
+plt.hist(mass_transit, bins=bins_mass, alpha=0.5, color='blue', label='Transit')
+plt.hist(mass_rv, bins=bins_mass, alpha=0.5, color='orange', label='Radial Velocity')
 plt.xscale('log')
 plt.xlabel('Massa del Pianeta [Masse di Giove]', fontsize=12)
 plt.ylabel('Numero di Esopianeti', fontsize=12)
@@ -109,12 +111,12 @@ log_mass_rv = np.log10(mass_rv[mass_rv > 0])
 
 if not log_mass_transit.empty and not log_mass_rv.empty:
     bins_log = np.linspace(
-        min(log_mass_transit.min(), log_mass_rv.min()), 
-        max(log_mass_transit.max(), log_mass_rv.max()), 
+       min(log_mass_transit.min(), log_mass_rv.min()), 
+       max(log_mass_transit.max(), log_mass_rv.max()), 
         50
     )
-    plt.hist(log_mass_transit, bins=bins_log, alpha=0.5, color='blue', label='Transit')
-    plt.hist(log_mass_rv, bins=bins_log, alpha=0.5, color='orange', label='Radial Velocity')
+    plt.hist(log_mass_transit, bins=bins_log, range=(min, max), alpha=0.5, color='blue', label='Transit')
+    plt.hist(log_mass_rv, bins=bins_log, alpha=0.5, range=(min, max), color='orange', label='Radial Velocity')
 
 plt.xlabel(r'$\log_{10}$ (Massa del Pianeta [Masse di Giove])', fontsize=12)
 plt.ylabel('Numero di Esopianeti', fontsize=12)
