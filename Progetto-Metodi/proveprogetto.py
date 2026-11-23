@@ -1,5 +1,7 @@
+from pathlib import Path
 import numpy as np
 from scipy import integrate, interpolate
+
 
 class Stella:
     """Rappresenta una stella caratterizzata da un nome, temperatura e raggio opzionale."""
@@ -45,11 +47,6 @@ class Stella:
         """
         Scala la densità spettrale di fotoni dalla superficie stellare alla distanza
         orbitale tramite il fattore geometrico (R_stella / d_orbita)^2.
-
-        Parametri:
-        - lambdas: array di lunghezze d'onda (in metri).
-        - distanza_orbita_m: distanza orbitale del pianeta (in metri).
-        - raggio_stella_m: raggio della stella in metri; se None, usa self.raggio_m.
         """
         r_eff = raggio_stella_m if raggio_stella_m is not None else self.raggio_m
         if r_eff is None:
@@ -168,26 +165,20 @@ class Stella:
         r_info = f", R={self.raggio_m:.3e} m" if self.raggio_m is not None else ""
         return f"Stella(nome='{self.nome}', T={self.temperatura} K{r_info})"
 
+
 class Sensore:
     """Rappresenta un sensore con area, sensibilità e tempo di esposizione."""
 
     SOGLIA_GAUSSIANA = 2e9
 
     def __init__(self, nome: str, area: float, sensibilita, tempo_esposizione: float):
-        """
-        Parametri:
-        - nome: etichetta del sensore
-        - area: area del sensore in m^2[cite: 4]
-        - sensibilita: float costante in [0, 1] oppure funzione sensibilita(lambdas)[cite: 4]
-        - tempo_esposizione: tempo di esposizione in secondi[cite: 4]
-        """
         self.nome = nome
         self.area = float(area)
         self.sensibilita = sensibilita
         self.tempo_esposizione = float(tempo_esposizione)
 
     def efficienza_spettrale(self, lambdas: np.ndarray) -> np.ndarray:
-        """Restituisce l'efficienza quantica epsilon(lambda) lungo l'array di lunghezze d'onda[cite: 4]."""
+        """Restituisce l'efficienza quantica epsilon(lambda) lungo l'array di lunghezze d'onda."""
         lam = np.asarray(lambdas, dtype=float)
         if callable(self.sensibilita):
             return np.asarray(self.sensibilita(lam), dtype=float)
@@ -196,7 +187,7 @@ class Sensore:
     def calcola_conteggi_da_spettro(self, lambdas: np.ndarray, flusso_spettrale: np.ndarray) -> float:
         """
         Calcola il conteggio medio atteso N_bar integrando sullo spettro
-        flusso_spettrale(lambda) * epsilon(lambda) * A * t[cite: 4, 5].
+        flusso_spettrale(lambda) * epsilon(lambda) * A * t.
         """
         lam = np.asarray(lambdas, dtype=float)
         flusso = np.asarray(flusso_spettrale, dtype=float)
@@ -205,7 +196,7 @@ class Sensore:
         return float(integrate.simpson(y=segnale_spettrale, x=lam))
 
     def conteggi_cumulativi(self, lambdas: np.ndarray, flusso_spettrale: np.ndarray) -> np.ndarray:
-        """Calcola l'integrale cumulativo dei conteggi al variare della lunghezza d'onda[cite: 4]."""
+        """Calcola l'integrale cumulativo dei conteggi al variare della lunghezza d'onda."""
         lam = np.asarray(lambdas, dtype=float)
         flusso = np.asarray(flusso_spettrale, dtype=float)
         qe = self.efficienza_spettrale(lam)
@@ -213,7 +204,7 @@ class Sensore:
         return integrate.cumulative_trapezoid(y=segnale_spettrale, x=lam, initial=0.0)
 
     def tasso_variazione_segnale(self, lambdas: np.ndarray, flusso_spettrale: np.ndarray) -> np.ndarray:
-        """Calcola la derivata del segnale spettrale rispetto a lambda[cite: 4]."""
+        """Calcola la derivata del segnale spettrale rispetto a lambda."""
         lam = np.asarray(lambdas, dtype=float)
         flusso = np.asarray(flusso_spettrale, dtype=float)
         qe = self.efficienza_spettrale(lam)
@@ -236,13 +227,13 @@ class Sensore:
         flusso_spettrale: np.ndarray,
         rng: np.random.Generator | None = None,
     ) -> int:
-        """Calcola N_bar dallo spettro e restituisce una singola misura rumorosa K[cite: 4, 5]."""
+        """Calcola N_bar dallo spettro e restituisce una singola misura rumorosa K."""
         segnale_medio = self.calcola_conteggi_da_spettro(lambdas, flusso_spettrale)
         return self._campiona_rumore(segnale_medio, rng=rng)
 
     @staticmethod
     def snr(segnale_medio: float) -> float:
-        """Calcola il rapporto segnale/rumore SNR = sqrt(N_bar)[cite: 5]."""
+        """Calcola il rapporto segnale/rumore SNR = sqrt(N_bar)."""
         return float(np.sqrt(segnale_medio)) if segnale_medio > 0 else 0.0
 
     def __repr__(self):
@@ -251,9 +242,6 @@ class Sensore:
             f"Sensore(nome='{self.nome}', area={self.area} m^2, "
             f"sensibilita={sens_str}, tempo_esposizione={self.tempo_esposizione} s)"
         )
-
-import numpy as np
-from scipy import integrate, interpolate
 
 
 class Atmosfera:
@@ -281,7 +269,7 @@ class Atmosfera:
         percorso_ozono: float = 1.0,          # Fattore moltiplicativo del percorso O3
         temperatura_ozono: float = 223.0,     # Temperatura efficace O3 (K)
         temperature_colonne_o3: list[float] | np.ndarray | None = None,
-        file_ozono: str | None = None,        # Percorso a 'SCIA O3 Temp cross-section V4.1.DAT'
+        file_ozono: str | Path | None = None, # Percorso a 'SCIA O3 Temp cross-section V4.1.DAT'
         unita_lambda_file: str = "nm",        # 'nm' oppure 'm'
         unita_sigma_file: str = "cm2",        # 'cm2' oppure 'm2'
     ):
@@ -307,7 +295,7 @@ class Atmosfera:
 
         if file_ozono is not None:
             self.carica_sezione_urto_ozono(
-                file_ozono,
+                str(file_ozono),
                 unita_lambda=unita_lambda_file,
                 unita_sigma=unita_sigma_file,
                 temperature_colonne=self._temp_colonne_o3,
@@ -338,15 +326,11 @@ class Atmosfera:
     # =========================================================================
 
     def spessore_orizzontale(self) -> float:
-        """
-        Calcola S_oriz = sqrt((R_T + S_zenith)^2 - R_T^2) trascurando la rifrazione.
-        """
+        """Calcola S_oriz = sqrt((R_T + S_zenith)^2 - R_T^2) trascurando la rifrazione."""
         return float(np.sqrt((self.r_terra + self.s_zenith) ** 2 - self.r_terra ** 2))
 
     def spessore_massa_aria(self, theta_rad: float | np.ndarray) -> float | np.ndarray:
-        """
-        Calcola lo spessore efficace S_theta in funzione dell'angolo zenitale theta (in radianti).
-        """
+        """Calcola lo spessore efficace S_theta in funzione dell'angolo zenitale theta (in radianti)."""
         cos_t = np.cos(theta_rad)
         rt = self.r_terra
         sz = self.s_zenith
@@ -361,17 +345,13 @@ class Atmosfera:
     # =========================================================================
 
     def coefficiente_rayleigh(self, lambdas: np.ndarray) -> np.ndarray:
-        """
-        Calcola beta(lambda, n, N) = (8 * pi^3 / (3 * lambda^4 * N)) * (n^2 - 1)^2 [m^-1].
-        """
+        """Calcola beta(lambda, n, N) = (8 * pi^3 / (3 * lambda^4 * N)) * (n^2 - 1)^2 [m^-1]."""
         lam = np.asarray(lambdas, dtype=float)
         fattore_rifrazione = (self.n_aria ** 2 - 1.0) ** 2
         return ((8.0 * (np.pi ** 3)) / (3.0 * (lam ** 4) * self.densita_molecole)) * fattore_rifrazione
 
     def trasmittanza_rayleigh(self, lambdas: np.ndarray, theta_rad: float = 0.0) -> np.ndarray:
-        """
-        Calcola exp(-beta(lambda) * S_theta) per lo scattering di Rayleigh.
-        """
+        """Calcola exp(-beta(lambda) * S_theta) per lo scattering di Rayleigh."""
         lam = np.asarray(lambdas, dtype=float)
         if not self.abilita_rayleigh:
             return np.ones_like(lam, dtype=float)
@@ -453,7 +433,6 @@ class Atmosfera:
             if temperature_colonne is not None and len(temperature_colonne) == n_temp_cols:
                 temps = np.asarray(temperature_colonne, dtype=float)
             else:
-                # Griglia di riferimento standard se le temperature di colonna non sono passate
                 temps = np.linspace(203.0, 293.0, n_temp_cols)
 
             idx_t = np.argsort(temps)
@@ -485,9 +464,7 @@ class Atmosfera:
             )
 
     def sezione_urto_ozono(self, lambdas: np.ndarray, temperatura_k: float | None = None) -> np.ndarray:
-        """
-        Restituisce sigma_O3(lambda, T) in [m^2] per le lunghezze d'onda fornite [m].
-        """
+        """Restituisce sigma_O3(lambda, T) in [m^2] per le lunghezze d'onda fornite [m]."""
         lam = np.asarray(lambdas, dtype=float)
         if self._sigma_interp_1d is None and self._sigma_interp_2d is None:
             return np.zeros_like(lam, dtype=float)
@@ -512,9 +489,7 @@ class Atmosfera:
         theta_rad: float = 0.0,
         temperatura_k: float | None = None,
     ) -> np.ndarray:
-        """
-        Calcola la trasmittanza dovuta all'ozono: exp(-tau_O3).
-        """
+        """Calcola la trasmittanza dovuta all'ozono: exp(-tau_O3)."""
         lam = np.asarray(lambdas, dtype=float)
         if not self.abilita_ozono or (self._sigma_interp_1d is None and self._sigma_interp_2d is None):
             return np.ones_like(lam, dtype=float)
@@ -538,9 +513,7 @@ class Atmosfera:
         theta_rad: float = 0.0,
         temperatura_ozono_k: float | None = None,
     ) -> np.ndarray:
-        """
-        Combina gli effetti attivi di scattering di Rayleigh e assorbimento dell'ozono.
-        """
+        """Combina gli effetti attivi di scattering di Rayleigh e assorbimento dell'ozono."""
         return self.trasmittanza_rayleigh(lambdas, theta_rad) * self.trasmittanza_ozono(
             lambdas,
             theta_rad=theta_rad,
@@ -554,9 +527,7 @@ class Atmosfera:
         theta_rad: float = 0.0,
         temperatura_ozono_k: float | None = None,
     ) -> np.ndarray:
-        """
-        Applica la legge N_obs(lambda) = N_0(lambda) * T_atm(lambda, theta).
-        """
+        """Applica la legge N_obs(lambda) = N_0(lambda) * T_atm(lambda, theta)."""
         return np.asarray(densita_fotoni_iniziale, dtype=float) * self.trasmittanza_totale(
             lambdas,
             theta_rad=theta_rad,
@@ -574,10 +545,7 @@ class Atmosfera:
         theta_rad: float = 0.0,
         n_punti: int = 2000,
     ) -> float:
-        """
-        Integra la trasmittanza atmosferica su [lambda_min, lambda_max] e restituisce
-        il valore medio nella banda tramite regola di Simpson.
-        """
+        """Integra la trasmittanza atmosferica su [lambda_min, lambda_max] e restituisce il valore medio."""
         griglia = np.linspace(lambda_min, lambda_max, n_punti)
         t_vals = self.trasmittanza_totale(griglia, theta_rad=theta_rad)
         integrale = integrate.simpson(y=t_vals, x=griglia)
@@ -588,24 +556,18 @@ class Atmosfera:
         lambdas: np.ndarray,
         theta_rad: float = 0.0,
     ) -> float:
-        """
-        Integra la profondità ottica spettrale tau(lambda) = -ln(T(lambda)) lungo l'array di lunghezze d'onda.
-        """
+        """Integra la profondità ottica spettrale tau(lambda) = -ln(T(lambda)) lungo l'array."""
         t_tot = np.maximum(self.trasmittanza_totale(lambdas, theta_rad=theta_rad), 1e-300)
         tau = -np.log(t_tot)
         return float(integrate.simpson(y=tau, x=lambdas))
 
     def derivata_trasmittanza_lambda(self, lambdas: np.ndarray, theta_rad: float = 0.0) -> np.ndarray:
-        """
-        Calcola dT_atm/dlambda rispetto alla lunghezza d'onda.
-        """
+        """Calcola dT_atm/dlambda rispetto alla lunghezza d'onda."""
         t_tot = self.trasmittanza_totale(lambdas, theta_rad=theta_rad)
         return np.gradient(t_tot, lambdas)
 
     def derivata_spessore_theta(self, angoli_rad: np.ndarray) -> np.ndarray:
-        """
-        Calcola dS_theta/dtheta rispetto all'angolo zenitale (in radianti).
-        """
+        """Calcola dS_theta/dtheta rispetto all'angolo zenitale (in radianti)."""
         ang = np.asarray(angoli_rad, dtype=float)
         s_vals = self.spessore_massa_aria(ang)
         return np.gradient(s_vals, ang)
